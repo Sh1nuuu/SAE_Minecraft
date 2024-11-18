@@ -1,0 +1,1 @@
+xp add @a[level=..49] 1 points
