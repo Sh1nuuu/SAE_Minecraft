@@ -1,6 +1,6 @@
-#### SAE_Minecraft
+# SAE_Minecraft
 
-Yanis DEZZAZ,
+***Yanis DEZZAZ,
 Guillaume GREDER,
 Xavier KNOEPFFLER-POUT,
 Théo MARCHAND,
