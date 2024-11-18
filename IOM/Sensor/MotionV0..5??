@@ -1,0 +1,108 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+
+// Configuration Wi-Fi
+const char* ssid = "Freebox-683DA3";  // Remplacez par votre SSID Wi-Fi
+const char* password = "f9xt2qwdhnqbm2h4qnw3hd";  // Remplacez par votre mot de passe Wi-Fi
+
+// Configuration MQTT
+const char* mqtt_server = "192.168.1.122";  // Remplacez par l'IP de votre Raspberry Pi
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int MOTION_PIN = A0;  // Broche D1 pour lire le capteur PIR
+
+long lastMsg = 0;
+char msg[50];
+
+// Variables pour le capteur de mouvement
+int lastMotionState = HIGH;  // Dernier état du capteur (LOW = pas de mouvement, HIGH = mouvement)
+unsigned long lastMotionTime = 0;  // Dernier moment où le mouvement a été détecté
+const unsigned long MESSAGE_INTERVAL = 5 * 1000; // Envoi du message toutes les 10 secondes
+
+void setup_wifi() {
+  delay(10);
+  Serial.println();
+  Serial.print("Connexion à ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connecté");
+  Serial.println("Adresse IP : ");
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect() {
+  // Boucle jusqu'à ce que la connexion soit établie
+  while (!client.connected()) {
+    Serial.print("Connexion au serveur MQTT...");
+    // Tente de se connecter
+    if (client.connect("ESP8266Client", "test", "test")) {
+      Serial.println("connecté");
+    } else {
+      Serial.print("Échec, rc=");
+      Serial.print(client.state());
+      Serial.println(" nouvelle tentative dans 5 secondes");
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Configuration de la connexion Wi-Fi
+  setup_wifi();
+
+  // Configurer le client MQTT pour utiliser le port 1883 (non sécurisé)
+  client.setServer(mqtt_server, 1883);  // Utilisation du port MQTT non sécurisé
+  client.setCallback([](char* topic, byte* payload, unsigned int length) {
+    String msg = "";
+    for (int i = 0; i < length; i++) {
+      msg += (char)payload[i];
+    }
+    Serial.println("Message reçu: " + msg);
+  });
+
+  // Configurer la broche du capteur PIR comme une entrée
+  pinMode(MOTION_PIN, INPUT);
+}
+
+void loop() {
+  // Boucle principale du programme
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  unsigned long currentTime = millis();
+
+  // Vérifier si 10 secondes se sont écoulées
+  if (currentTime - lastMsg >= MESSAGE_INTERVAL) {
+    lastMsg = currentTime;  // Mettre à jour le temps du dernier message
+
+    // Lire l'état du capteur de mouvement
+    int motionDetected = (digitalRead(MOTION_PIN) == HIGH) ? HIGH : LOW;
+
+    // Si un mouvement est détecté
+    if (motionDetected == HIGH) {
+      Serial.println("Mouvement détecté !");
+      client.publish("test/topic", "1");  // Publier un message MQTT sur "test/topic" pour indiquer un mouvement
+    } 
+    // Si pas de mouvement détecté
+    else {
+      Serial.println("Pas de mouvement détecté");
+      client.publish("test/topic", "0");  // Publier un message MQTT sur "test/topic" pour indiquer l'absence de mouvement
+    }
+  }
+
+  delay(100);  // Petit délai pour éviter des lectures trop rapides du capteur
+}

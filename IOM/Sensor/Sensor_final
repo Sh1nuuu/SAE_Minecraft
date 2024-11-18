@@ -1,0 +1,131 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <DHT.h>
+
+const char* ssid = "Groupe4";
+const char* password = "groupe_4";
+const char* mqtt_server = "192.168.10.122";
+const int mqtt_port = 1883;
+const char* mqtt_user = "test";
+const char* mqtt_password = "test";
+
+const char* mqtt_co2_topic = "topic/co2";
+const char* mqtt_temp_topic = "topic/temperature";
+const char* mqtt_humidity_topic = "topic/humidite";
+const char* mqtt_motion_topic = "topic/mouvement";
+
+const int gasSensor = A0;
+const int motionSensor = D1;
+#define DHTPIN D2
+#define DHTTYPE DHT22
+
+DHT dht(DHTPIN, DHTTYPE);
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int MAX_CO2_VALUE = 1000;
+unsigned long previousMotionCheckTime = 0;
+const unsigned long motionCheckInterval = 150UL;
+bool motionDetected = false;
+
+void setup_wifi() {
+  Serial.print("Connexion au réseau WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connecté, IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Tentative de connexion MQTT ... ");
+    if (client.connect("ESP8266Client", mqtt_user, mqtt_password)) {
+      Serial.println("Connecté");
+    } else {
+      Serial.print("Échec, rc=");
+      Serial.print(client.state());
+      Serial.println(" Nouvelle tentative dans 5 secondes");
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  setup_wifi();
+  client.setServer(mqtt_server, mqtt_port);
+
+  pinMode(gasSensor, INPUT);
+  pinMode(motionSensor, INPUT);
+  dht.begin();
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("Configuration terminée. Démarrage...");
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    setup_wifi();
+  }
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  // Détection de mouvement
+  unsigned long currentTime = millis();
+  if (currentTime - previousMotionCheckTime >= motionCheckInterval) {
+    int isMotionDetected = digitalRead(motionSensor);
+
+    if (isMotionDetected == HIGH) {
+      if (!motionDetected) {
+        Serial.println("Mouvement détecté !");
+        motionDetected = true;
+        digitalWrite(LED_BUILTIN, HIGH);
+        client.publish(mqtt_motion_topic, "Mouvement détecté !");
+      }
+    } else {
+      if (motionDetected) {
+        Serial.println("Mouvement terminé !");
+        motionDetected = false;
+        digitalWrite(LED_BUILTIN, LOW);
+        client.publish(mqtt_motion_topic, "Mouvement terminé !");
+      }
+    }
+    previousMotionCheckTime = currentTime;
+  }
+
+  // Mesure du CO2
+  float rawCO2Value = analogRead(gasSensor);
+  float co2Percentage = (rawCO2Value / 1023.0) * 100.0;
+  float co2ValueInPPM = (rawCO2Value / 1023.0) * MAX_CO2_VALUE;
+  Serial.print("CO2 : ");
+  Serial.print(co2Percentage);
+  Serial.println("%");
+  client.publish(mqtt_co2_topic, String(co2Percentage).c_str());
+
+  // Lecture de température et d'humidité
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  if (!isnan(temperature) && !isnan(humidity)) {
+    Serial.print("Température : ");
+    Serial.print(temperature);
+    Serial.print(" °C, Humidité : ");
+    Serial.print(humidity);
+    Serial.println(" %");
+
+    client.publish(mqtt_temp_topic, String(temperature).c_str());
+    client.publish(mqtt_humidity_topic, String(humidity).c_str());
+  } else {
+    Serial.println("Erreur de lecture du capteur DHT, nouvelle tentative dans 2 secondes...");
+    delay(2000);  // Attente avant une nouvelle tentative de lecture
+  }
+
+  delay(5000);
+}

@@ -1,0 +1,135 @@
+ /* Styles généraux */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .medecin-dashboard {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        p {
+            color: #555;
+        }
+
+        /* Styles pour le menu déroulant */
+        .menu-dropdown {
+            margin-bottom: 20px;
+        }
+
+        /* Styles pour les formulaires */
+        .ajouts-container {
+            display: none; /* Par défaut, cacher tous les formulaires */
+            flex-direction: column;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .ajouts-container.active {
+            display: flex; /* Afficher uniquement le formulaire actif */
+        }
+
+        .ajout-form {
+            flex-direction: column;
+            width: 100%; /* Prend toute la largeur */
+            margin: 0; /* Pas de marge */
+            box-shadow: none; /* Pas d'ombre pour les formulaires */
+        }
+
+        .ajout-form h2 {
+            margin-top: 0; /* Pas de marge pour le titre */
+        }
+
+        label {
+            margin-top: 10px;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px); /* Ajuste pour le padding */
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        /* Styles pour les tableaux */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .btn-modifier, .btn-supprimer {
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-modifier {
+            background-color: #007bff;
+        }
+
+        .btn-modifier:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-supprimer {
+            background-color: #dc3545;
+        }
+
+        .btn-supprimer:hover {
+            background-color: #c82333;
+        }
+
+        .btn-retour {
+            background-color: #6c757d;
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 15px;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .btn-retour:hover {
+            background-color: #5a6268;
+        }

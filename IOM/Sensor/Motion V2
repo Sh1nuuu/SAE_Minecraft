@@ -1,0 +1,148 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <ESP8266HTTPClient.h>  // Ajoutez cette ligne pour les requêtes HTTP
+
+// Configuration Wi-Fi
+const char* ssid = "Groupe4";  // Remplacez par votre SSID Wi-Fi
+const char* password = "groupe_4";  // Remplacez par votre mot de passe Wi-Fi
+
+// Configuration MQTT
+const char* mqtt_server = "192.168.1.122";  // Remplacez par l'IP de votre Raspberry Pi
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int MOTION_PIN = D1;  // Broche D1 pour lire le capteur PIR
+
+long lastMsg = 0;
+char msg[50];
+
+// Variables pour le capteur de mouvement
+int lastMotionState = LOW;
+unsigned long lastMotionTime = 0;
+const unsigned long MOTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes en millisecondes
+bool motionMessageSent = false; // Variable pour garder une trace de l'envoi du message "0"
+bool motionDetectedPreviously = false; // Variable pour garder une trace de l'état précédent du capteur
+
+void setup_wifi() {
+  delay(10);
+  Serial.println();
+  Serial.print("Connexion à ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connecté");
+  Serial.println("Adresse IP : ");
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect() {
+  // Boucle jusqu'à ce que la connexion soit établie
+  while (!client.connected()) {
+    Serial.print("Connexion au serveur MQTT...");
+    // Tente de se connecter
+    if (client.connect("ESP8266Client", "test", "test")) {
+      Serial.println("connecté");
+    } else {
+      Serial.print("Échec, rc=");
+      Serial.print(client.state());
+      Serial.println(" nouvelle tentative dans 5 secondes");
+      delay(5000);
+    }
+  }
+}
+
+void insertMovementData(float valeur, int id_patient) {
+  if (WiFi.status() == WL_CONNECTED) { // Vérifiez si le WiFi est connecté
+    HTTPClient http;
+    
+    // Créez l'URL pour l'insertion dans la base de données
+    String serverPath = "http://192.168.1.122/insert_movement.php";  // Remplacez par l'URL de votre script PHP
+    serverPath += "?type_capteur=mouvement&valeur=" + String(valeur) + "&id_patient=" + String(id_patient);
+
+    // Démarrez la requête HTTP
+    http.begin(serverPath);
+    int httpResponseCode = http.GET(); // Effectuez une requête GET
+
+    // Vérifiez le code de réponse HTTP
+    if (httpResponseCode > 0) {
+      String response = http.getString(); // Obtenez la réponse
+      Serial.println(httpResponseCode);
+      Serial.println(response); // Affichez la réponse
+    } else {
+      Serial.print("Erreur lors de la requête HTTP : ");
+      Serial.println(httpResponseCode);
+    }
+
+    // Libérez les ressources
+    http.end();
+  } else {
+    Serial.println("Erreur de connexion WiFi");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Configuration de la connexion Wi-Fi
+  setup_wifi();
+
+  // Configurer le client MQTT pour utiliser le port 1883 (non sécurisé)
+  client.setServer(mqtt_server, 1883);  // Utilisation du port MQTT non sécurisé
+  client.setCallback([](char* topic, byte* payload, unsigned int length) {
+    String msg = "";
+    for (int i = 0; i < length; i++) {
+      msg += (char)payload[i];
+    }
+    Serial.println("Message reçu: " + msg);
+  });
+}
+
+void loop() {
+  // Boucle principale du programme
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  // Lecture de la valeur du capteur de mouvement
+  int motionDetected = (analogRead(MOTION_PIN) > 900) ? HIGH : LOW;
+  unsigned long currentTime = millis();
+
+  if (motionDetected != lastMotionState) {
+    lastMotionState = motionDetected;
+    lastMotionTime = currentTime;
+    if (motionDetected == HIGH) {
+      // Si un mouvement est détecté
+      Serial.println("Mouvement détecté");
+      insertMovementData(1.0, 1); // Appelez la fonction pour insérer les données (valeur=1.0, id_patient=1)
+      if (!motionDetectedPreviously) {
+        client.publish("test/topic", "1"); // Publier un message MQTT sur "test/topic"
+        motionDetectedPreviously = true;
+      }
+    }
+  } else if (motionDetected == LOW && currentTime - lastMotionTime >= MOTION_TIMEOUT && !motionMessageSent) {
+    // Si aucun mouvement n'est détecté depuis un certain temps et qu'aucun message "0" n'a été envoyé
+    Serial.println("Aucun mouvement détecté depuis 5 minutes.");
+    client.publish("test/topic", "0"); // Publier un message MQTT sur "test/topic"
+    motionDetectedPreviously = false;
+    motionMessageSent = true;
+  } else if (motionDetected == HIGH && currentTime - lastMotionTime >= MOTION_TIMEOUT) {
+    // Si un mouvement est détecté depuis un certain temps
+    Serial.println("Du mouvement depuis 5 minutes");
+    client.publish("test/topic", "1"); // Publier un message MQTT sur "test/topic"
+    lastMotionTime = currentTime;
+  } else if (motionDetected == HIGH) {
+    // Si un mouvement est détecté
+    motionMessageSent = false;
+  }
+
+  delay(100);
+}
