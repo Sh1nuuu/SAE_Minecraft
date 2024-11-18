@@ -1,7 +1,9 @@
-Yanis DEZZAZ
-Guillaume GREDER
-Xavier KNOEPFFLER-POUT
-Théo MARCHAND
+#### SAE_Minecraft
+
+Yanis DEZZAZ,
+Guillaume GREDER,
+Xavier KNOEPFFLER-POUT,
+Théo MARCHAND,
 ***
 # Introduction
 ## Présentation du projet
