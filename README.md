@@ -44,6 +44,8 @@ Quatre joueurs vont jouer en réseau à Minecraft. L'une des deux équipes devra
 plus rapidement possible un diamant qui aura été caché de manière aléatoire afin de remporter
 la partie. L'autre équipe devra protéger ce bloc de diamant.
 
+---
+
 #### 4. Règles du Jeu
 Quatre joueurs, par équipes de deux.
 La partie se termine lorsque le bloc de diamant est détruit ou après 10 minutes.
