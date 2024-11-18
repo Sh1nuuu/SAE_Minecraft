@@ -1,0 +1,4 @@
+say Global Repeat
+
+schedule function timers:global_repeat 1s replace
+
