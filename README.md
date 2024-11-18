@@ -1,5 +1,4 @@
-# SAE Minecraft
-**Équipe :Yanis DEZZAZ
+Yanis DEZZAZ
 Guillaume GREDER
 Xavier KNOEPFFLER-POUT
 Théo MARCHAND
